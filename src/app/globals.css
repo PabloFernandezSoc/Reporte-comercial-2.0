@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0d1b24;
+  --color-ink-2: #1b3a4b;
+  --color-paper: #edf1f0;
+  --color-surface: #ffffff;
+  --color-line: #d6dedc;
+  --color-line-2: #e9eeec;
+  --color-muted: #6a7b82;
+  --color-venta: #0e7c86;
+  --color-venta-soft: #e2f1f2;
+  --color-meta: #4e6b78;
+  --color-ok: #2e7d4f;
+  --color-ok-soft: #e6f2ea;
+  --color-warn: #b5820f;
+  --color-warn-soft: #fbf1da;
+  --color-risk: #b3402e;
+  --color-risk-soft: #fae9e5;
+  --color-info: #175e9e;
+  --color-info-soft: #e4eef7;
+  --font-display: var(--font-barlow), "Arial Narrow", system-ui, sans-serif;
+  --font-sans: var(--font-plex), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, Consolas, monospace;
+}
+
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+body {
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.tbl thead th {
+  position: sticky;
+  top: 0;
+  background: #f5f8f7;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-ink-2);
+  text-align: left;
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--color-line);
+  white-space: nowrap;
+  z-index: 2;
+}
+.tbl thead th.r,
+.tbl td.r {
+  text-align: right;
+}
+.tbl tbody td {
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--color-line-2);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.tbl td.r {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.tbl tbody tr:hover {
+  background: #f5f9f8;
+}
+.recharts-cartesian-axis-tick text {
+  font-size: 11px;
+  fill: var(--color-muted);
+}
+.recharts-legend-item-text {
+  font-size: 12px;
+  color: var(--color-ink-2) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

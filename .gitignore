@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+.env.*.local
+# Datos comerciales reales: NUNCA al repo (es público)
+data/private/
+*.log
+.DS_Store
+next-env.d.ts
+tsconfig.tsbuildinfo
