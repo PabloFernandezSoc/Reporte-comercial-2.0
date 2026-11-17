@@ -1,4 +1,6 @@
 "use client";
+import { PageHeader } from "@/components/PageHeader";
+import { Download } from "lucide-react";
 import { useDatos } from "@/components/DataProvider";
 import { Aviso, Btn, Card, Eyebrow, Tabla } from "@/components/ui";
 import { UMBRALES_DEF, type Umbrales } from "@/lib/anomaly";
@@ -30,6 +32,7 @@ export default function Config() {
 
   return (
     <div>
+      <PageHeader titulo="Configuración" sub="Sensibilidad de alertas, correos y fuente de datos." />
       <Eyebrow>Detección de fluctuaciones</Eyebrow>
       <Card titulo="Umbrales de alerta" sub="Se guardan en este navegador." accion={<Btn peque onClick={() => d.setUmbrales(UMBRALES_DEF)}>Valores por defecto</Btn>}>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -68,7 +71,7 @@ export default function Config() {
       <Eyebrow>Datos</Eyebrow>
       {d.datos && (
         <div className="grid gap-3.5 lg:grid-cols-2">
-          <Card titulo="Fuente" accion={<Btn peque onClick={exportarHechos}>⇩ CSV de datos</Btn>}>
+          <Card titulo="Fuente" accion={<Btn peque onClick={exportarHechos}><Download size={14} aria-hidden /> CSV de datos</Btn>}>
             <ul className="space-y-1 text-[13px]">
               <li>Origen: <b>{d.datos.fuente === "demo" ? "DEMO (ficticio)" : "Bit ERP"}</b></li>
               <li>Actualizado: {new Date(d.datos.actualizado).toLocaleString("es-CL")}</li>

@@ -1,4 +1,6 @@
 "use client";
+import { PageHeader } from "@/components/PageHeader";
+import { Trash2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useDatos } from "@/components/DataProvider";
 import { Aviso, Btn, Card, Empty, Eyebrow, PillSeg, Tabla } from "@/components/ui";
@@ -64,7 +66,7 @@ export default function MetasPage() {
 
   return (
     <div>
-      <Eyebrow>Metas {anio} · Plan de ventas y Growth Scorecard</Eyebrow>
+      <PageHeader titulo={`Metas ${anio}`} sub={<>Plan de ventas, Growth Scorecard{metas.q4 ? <> y propuesta Q4 (<b>{metas.q4.archivo}</b>)</> : null}.</>} />
       <Aviso>
         Origen: <b>{d.metasLocales ? "editadas en este navegador" : d.datos?.metasFuente === "privado" ? "archivo privado del servidor" : d.datos?.metasFuente === "demo" ? "metas DEMO" : "—"}</b>.
         Los cambios se guardan en este navegador. Exporta el JSON para respaldar o compartir.
@@ -125,7 +127,7 @@ export default function MetasPage() {
                 </td>
               ))}
               <td className="r">{clp(meses.reduce((a, p) => a + (+c.m[p] || 0), 0))}</td>
-              <td><button className="cursor-pointer text-xs text-risk" title="Eliminar" onClick={() => confirm(`¿Eliminar ${c.c}?`) && editar((m) => m.clientes.splice(i, 1))}>✕</button></td>
+              <td><button className="cursor-pointer text-xs text-risk" title="Eliminar" aria-label={`Eliminar ${c.c}`} onClick={() => confirm(`¿Eliminar ${c.c}?`) && editar((m) => m.clientes.splice(i, 1))}><Trash2 size={14} aria-hidden /></button></td>
             </tr>
           ))}
         </tbody>

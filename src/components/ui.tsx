@@ -1,4 +1,5 @@
 "use client";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import clsx from "clsx";
 import type { ReactNode } from "react";
 
@@ -55,7 +56,7 @@ export function Kpi({ k, v, d, tono = "venta", children }: { k: string; v: React
   return (
     <div className={clsx("rounded border border-l-[3px] border-line bg-surface px-4 py-3", TONO_BORDE[tono])}>
       <div className="text-[10px] font-semibold uppercase tracking-[.11em] text-muted">{k}</div>
-      <div className="num mt-1 text-[24px] leading-tight font-semibold tracking-tight">{v}</div>
+      <div className="mt-1 text-[26px] leading-tight font-semibold tracking-tight text-ink">{v}</div>
       {d && <div className="mt-1 text-[11.5px] text-muted">{d}</div>}
       {children}
     </div>
@@ -99,7 +100,8 @@ export function Variacion({ v, dec = 0 }: { v: number | null | undefined; dec?: 
   if (v == null || !isFinite(v)) return <span className="text-muted">—</span>;
   return (
     <span className={clsx("font-semibold", v >= 0 ? "text-ok" : "text-risk")}>
-      {v >= 0 ? "▲ +" : "▼ "}
+      {v >= 0 ? <TrendingUp size={13} aria-hidden className="mr-0.5 inline" /> : <TrendingDown size={13} aria-hidden className="mr-0.5 inline" />}
+      {v >= 0 ? "+" : ""}
       {v.toFixed(dec)}%
     </span>
   );

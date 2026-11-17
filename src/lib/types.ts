@@ -27,12 +27,15 @@ export interface MetaCliente {
   s: string; // segmento
   m: Record<string, number>; // meta por período
   r?: Record<string, number>; // venta de referencia del scorecard
+  cal?: string; // calificación comercial (ACTIVO, SPOT, Churn, INACTIVO…)
+  x?: string; // ejecutiva responsable según el plan
 }
 
 export interface Metas {
   general: Record<string, number>;
   seg: Record<string, Record<string, number>>;
   clientes: MetaCliente[];
+  q4?: { archivo: string; importado: string; periodos: string[] };
 }
 
 export interface RespuestaDatos {

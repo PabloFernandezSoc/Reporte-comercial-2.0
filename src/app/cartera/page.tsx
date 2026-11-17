@@ -1,4 +1,5 @@
 "use client";
+import { PageHeader } from "@/components/PageHeader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
@@ -41,6 +42,7 @@ export default function Cartera() {
 
   return (
     <div>
+      <PageHeader titulo="Cartera" sub="Rentabilidad, volumen y concentración de clientes en el período filtrado." />
       <Eyebrow>Matriz estratégica de cartera</Eyebrow>
       <Aviso>Cada cliente se ubica por su <b>venta</b> (horizontal, escala logarítmica) y su <b>margen %</b> (vertical) contra la mediana de la cartera. El tamaño es la cantidad de servicios. Haz clic en un punto para abrir el cliente.</Aviso>
       <Card titulo="Venta contra margen" sub={`Mediana de venta ${clp(r.mV)} · mediana de margen ${pct(r.mM)}`}>

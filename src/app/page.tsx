@@ -1,4 +1,6 @@
 "use client";
+import { PageHeader } from "@/components/PageHeader";
+import { Q4Panel } from "@/components/Q4Panel";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AlertaCard } from "@/components/AlertaCard";
@@ -101,21 +103,19 @@ export default function Resumen() {
 
   return (
     <div>
-      <Eyebrow>
-        Indicadores · {mes(r.periodos[0])} a {mes(r.periodos[r.periodos.length - 1])}
-      </Eyebrow>
+      <PageHeader titulo="Resumen comercial" sub={<>Venta, metas y salud de la cartera · {mes(r.periodos[0])} a {mes(r.periodos[r.periodos.length - 1])}</>} />
       <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-6">
         <Kpi k="Venta" v={clpCorto(tot.venta)} d={varMes != null ? <>Último mes cerrado <Variacion v={varMes} /></> : `${r.periodos.length} meses`}>
           <Sparkline valores={cerrados.map((s) => s.venta)} />
         </Kpi>
         <Kpi k="Utilidad" tono={margen >= 15 ? "ok" : margen >= 8 ? "warn" : "risk"} v={clpCorto(tot.util)} d={`Margen ${pct(margen)}`}>
-          <Sparkline valores={cerrados.map((s) => (s.venta ? (s.util / s.venta) * 100 : 0))} color={COL.ok} />
+          <Sparkline valores={cerrados.map((s) => (s.venta ? (s.util / s.venta) * 100 : 0))} />
         </Kpi>
         <Kpi k="Cumplimiento meta" tono={nivel(cumpl, d.umbrales.umbralOk, d.umbrales.umbralAlerta)} v={pct(cumpl)} d={tot.meta ? `${clpCorto(ventaConMeta)} de ${clpCorto(tot.meta)} · ${mesesConMeta} de ${serie.length} meses con meta` : "Sin meta cargada"}>
           <div className="mt-2"><Gauge cumpl={cumpl} /></div>
         </Kpi>
         <Kpi k="Servicios" v={num(tot.serv)} d={`Ticket promedio ${clp(tot.serv ? tot.venta / tot.serv : 0)}`}>
-          <Sparkline valores={cerrados.map((s) => s.serv)} color={COL.meta} />
+          <Sparkline valores={cerrados.map((s) => s.serv)} />
         </Kpi>
         <Kpi k={`Proyección cierre ${r.anio}`} tono={nivel(cierreCumpl, d.umbrales.umbralOk, d.umbrales.umbralAlerta)} v={clpCorto(r.cierre?.proy ?? r.cierre?.real)} d={r.cierre?.meta ? `${pct(cierreCumpl, 0)} de la meta anual ${clpCorto(r.cierre.meta)}` : "Sin meta anual"} />
         <Link href="/alertas" className="block">
@@ -131,9 +131,11 @@ export default function Resumen() {
         </div>
       )}
 
+      <div className="mt-5"><Q4Panel /></div>
+
       <Eyebrow>Evolución contra meta</Eyebrow>
       <div className="grid gap-3.5 lg:grid-cols-[3fr_2fr]">
-        <Card titulo="Venta contra meta por mes" sub={`Barras: venta (clara = mes en curso) y ${etiquetaFuenteMeta(serie[0].fuente).toLowerCase()}. Línea: % de cumplimiento.`}>
+        <Card titulo="Venta contra meta por mes" sub="Barras: venta (la clara es el mes en curso). Línea: meta del mes. El % de cumplimiento aparece al pasar el cursor y en el detalle mensual.">
           <VentaMetaChart data={serie} />
         </Card>
         <Card titulo={`Acumulado ${r.anio} y proyección de cierre`} sub="La proyección usa el ritmo de los últimos 3 meses cerrados ajustado por estacionalidad.">
@@ -173,10 +175,10 @@ export default function Resumen() {
             alto={300}
             data={r.etData}
             series={[
-              { key: "finalizado", nombre: ETAPAS.finalizado, color: COL.ok },
-              { key: "curso", nombre: ETAPAS.curso, color: COL.warn },
-              { key: "proyeccion", nombre: ETAPAS.proyeccion, color: COL.meta },
-              { key: "sinclasif", nombre: ETAPAS.sinclasif, color: "#B9C4C2" },
+              { key: "finalizado", nombre: ETAPAS.finalizado, color: COL.etapa.finalizado },
+              { key: "curso", nombre: ETAPAS.curso, color: COL.etapa.curso },
+              { key: "proyeccion", nombre: ETAPAS.proyeccion, color: COL.etapa.proyeccion },
+              { key: "sinclasif", nombre: ETAPAS.sinclasif, color: COL.etapa.sinclasif },
             ]}
           />
         </Card>

@@ -1,4 +1,5 @@
 "use client";
+import { RefreshCw } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -51,9 +52,9 @@ export function Shell({ children }: { children: ReactNode }) {
           <button
             onClick={d.refrescar}
             disabled={d.cargando}
-            className="cursor-pointer rounded border border-venta bg-venta px-3.5 py-2 text-[13px] font-medium text-white hover:bg-[#0B676F] disabled:opacity-50"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-venta bg-venta px-3.5 py-2 text-[13px] font-medium text-white hover:bg-[#0B676F] disabled:opacity-50"
           >
-            ↻ Actualizar
+            <RefreshCw size={15} aria-hidden className={d.cargando ? "animate-spin" : ""} /> Actualizar
           </button>
         </div>
       </header>

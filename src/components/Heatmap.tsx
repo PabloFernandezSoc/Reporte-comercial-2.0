@@ -7,9 +7,9 @@ import { clp, mes } from "@/lib/format";
 export function colorZ(z: number | null, real: number): string {
   if (z == null) return real > 0 ? "#F1F4F3" : "#FAFBFB";
   const t = Math.max(-3, Math.min(3, z));
-  if (Math.abs(t) < 0.8) return "#F4F7F6";
+  if (Math.abs(t) < 0.8) return "#F0F2F1";
   const a = Math.min(1, (Math.abs(t) - 0.8) / 2.2);
-  return t < 0 ? `rgba(179,64,46,${0.15 + 0.75 * a})` : `rgba(46,125,79,${0.15 + 0.7 * a})`;
+  return t < 0 ? `rgba(179,64,46,${0.15 + 0.75 * a})` : `rgba(42,120,214,${0.15 + 0.7 * a})`;
 }
 
 export function Heatmap({ analisis, meses = 12, max = 30 }: { analisis: AnalisisCliente[]; meses?: number; max?: number }) {
@@ -61,7 +61,7 @@ export function Heatmap({ analisis, meses = 12, max = 30 }: { analisis: Analisis
         <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rounded-sm" style={{ background: "rgba(179,64,46,.85)" }} /> muy bajo lo normal</span>
         <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rounded-sm" style={{ background: "rgba(179,64,46,.3)" }} /> algo bajo</span>
         <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rounded-sm border border-line" style={{ background: "#F4F7F6" }} /> normal</span>
-        <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rounded-sm" style={{ background: "rgba(46,125,79,.7)" }} /> sobre lo normal</span>
+        <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rounded-sm" style={{ background: "rgba(42,120,214,.7)" }} /> sobre lo normal</span>
       </div>
     </div>
   );

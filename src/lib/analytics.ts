@@ -26,6 +26,7 @@ export interface InfoCliente {
   segmento: string;
   scorecard: MetaCliente | null;
   ejecutiva: string;
+  calificacion: string;
 }
 
 export interface Modelo {
@@ -58,10 +59,11 @@ export function construirModelo(datos: RespuestaDatos, metas: Metas | null, alia
   const clientes = new Map<string, InfoCliente>();
   for (const [c, m] of ejeVenta) {
     const sc = cruce.buscar(c);
-    const eje = [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
-    clientes.set(c, { nombre: c, segmento: sc?.s ?? "SIN CLASIFICAR", scorecard: sc, ejecutiva: eje });
+    // si el ERP no informa ejecutiva, se usa la del plan de metas
+    const eje = [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || sc?.x || "";
+    clientes.set(c, { nombre: c, segmento: sc?.s ?? "SIN CLASIFICAR", scorecard: sc, ejecutiva: eje, calificacion: sc?.cal ?? "" });
   }
-  const ejecutivas = [...new Set(datos.hechos.map((h) => h.x).filter(Boolean))].sort();
+  const ejecutivas = [...new Set([...clientes.values()].map((c) => c.ejecutiva).filter(Boolean))].sort();
   const segmentos = ["FFWW", "CD", "CAPEX", "CHURN", "SIN CLASIFICAR"].filter((s) => [...clientes.values()].some((c) => c.segmento === s));
 
   // estacionalidad de la empresa con meses cerrados
@@ -74,6 +76,8 @@ export function construirModelo(datos: RespuestaDatos, metas: Metas | null, alia
 }
 
 /* ---------------- filtros ---------------- */
+
+export const ejecutivaDe = (M: Modelo, h: Hecho) => h.x || M.clientes.get(h.c)?.ejecutiva || "";
 
 export function periodosFiltrados(M: Modelo, F: Filtros): string[] {
   return M.periodos.filter((p) => (!F.desde || p >= F.desde) && (!F.hasta || p <= F.hasta));
@@ -92,7 +96,7 @@ export function hechosFiltrados(M: Modelo, F: Filtros, opts: { ignorarPeriodo?: 
   return M.datos.hechos.filter((h) => {
     if (!opts.ignorarPeriodo && ((F.desde && h.p < F.desde) || (F.hasta && h.p > F.hasta))) return false;
     if (!opts.ignorarEtapa && F.etapa && h.e !== F.etapa) return false;
-    if (F.ejecutiva && h.x !== F.ejecutiva) return false;
+    if (F.ejecutiva && ejecutivaDe(M, h) !== F.ejecutiva) return false;
     return pasaCliente(M, F, h.c);
   });
 }
@@ -238,7 +242,7 @@ export function analizarClientes(M: Modelo, F: Filtros, mesAnalisis: string, u: 
   const porCli = new Map<string, Hecho[]>();
   for (const h of M.datos.hechos) {
     if (h.p > mesAnalisis) continue;
-    if (F.ejecutiva && h.x !== F.ejecutiva) continue;
+    if (F.ejecutiva && ejecutivaDe(M, h) !== F.ejecutiva) continue;
     if (!pasaCliente(M, F, h.c)) continue;
     (porCli.get(h.c) || porCli.set(h.c, []).get(h.c)!).push(h);
   }
@@ -412,7 +416,7 @@ export function generarAlertas(M: Modelo, analisis: AnalisisCliente[], mesAnalis
     const sc = a.info.scorecard;
     if (sc) {
       const meta = ytd.reduce((x, p) => x + (+sc.m[p] || 0), 0);
-      const real = ytd.reduce((x, p) => x + (a.venta.puntos.find((q) => q.p === p)?.real || 0), 0);
+      const real = ytd.filter((p) => +sc.m[p] > 0).reduce((x, p) => x + (a.venta.puntos.find((q) => q.p === p)?.real || 0), 0);
       const cumpl = meta > 0 ? (real / meta) * 100 : null;
       if (cumpl != null && cumpl < u.umbralAlerta && meta - real >= u.brechaMinClp && d.diag !== "fuga") {
         const tk = a.venta.puntos.length ? real / Math.max(1, ytd.reduce((x, p) => x + (a.serv.puntos.find((q) => q.p === p)?.real || 0), 0)) : 0;

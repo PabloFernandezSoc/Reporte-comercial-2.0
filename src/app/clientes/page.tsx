@@ -1,4 +1,5 @@
 "use client";
+import { PageHeader } from "@/components/PageHeader";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { COL, Sparkline } from "@/components/charts";
@@ -33,7 +34,7 @@ export default function Clientes() {
 
   return (
     <div>
-      <Eyebrow>Cartera de clientes · {filas.length}</Eyebrow>
+      <PageHeader titulo="Clientes" sub={<>{filas.length} clientes · estado al cierre de {d.mesAnalisis}</>} />
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px]">
         <Pill tono="risk">{conteo(["fuga", "caida-significativa"])} en riesgo</Pill>
         <Pill tono="warn">{conteo(["tendencia-baja", "bajo-vigilancia"])} a vigilar</Pill>
@@ -61,7 +62,7 @@ export default function Clientes() {
               <tr key={c.nombre}>
                 <td>
                   <Link href={`/clientes/${encodeURIComponent(c.nombre)}`} className="font-semibold hover:text-venta hover:underline">{c.nombre}</Link>
-                  <div className="mt-0.5"><PillSeg s={c.segmento} /></div>
+                  <div className="mt-0.5 flex gap-1"><PillSeg s={c.segmento} />{d.modelo?.clientes.get(c.nombre)?.calificacion && <Pill tono="n">{d.modelo.clientes.get(c.nombre)!.calificacion}</Pill>}</div>
                 </td>
                 <td><Pill tono={info.tono}>{info.label}</Pill></td>
                 <td><Sparkline valores={a?.venta.puntos.slice(-12).map((p) => p.real) ?? []} color={info.tono === "risk" ? COL.risk : info.tono === "warn" ? COL.warn : COL.venta} alto={30} /></td>

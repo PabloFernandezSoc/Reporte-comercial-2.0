@@ -1,4 +1,6 @@
 "use client";
+import { PageHeader } from "@/components/PageHeader";
+import { Download } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AlertaCard, ESTADOS } from "@/components/AlertaCard";
@@ -57,7 +59,7 @@ export default function Alertas() {
 
   return (
     <div>
-      <Eyebrow>Centro de alertas · {mes(d.mesAnalisis)}</Eyebrow>
+      <PageHeader titulo="Centro de alertas" sub={<>Clientes que salieron de su comportamiento normal en {mes(d.mesAnalisis)}, priorizados por impacto.</>} />
       <div className="grid gap-3.5 md:grid-cols-4">
         <Kpi k="Venta en riesgo" tono="risk" v={clpCorto(abiertas.filter((a) => a.prioridad === 1).reduce((x, a) => x + a.impacto, 0))} d={`${abiertas.filter((a) => a.prioridad === 1).length} alertas urgentes abiertas`} />
         <Kpi k="Alertas abiertas" tono="warn" v={abiertas.length} d={`${d.alertas.length} detectadas en el mes`} />
@@ -106,7 +108,7 @@ export default function Alertas() {
             {Object.entries(ESTADOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>
-        <Btn peque onClick={exportar} className="ml-auto">⇩ Exportar CSV</Btn>
+        <Btn peque onClick={exportar} className="ml-auto"><Download size={14} aria-hidden /> Exportar CSV</Btn>
       </div>
 
       {[1, 2, 3].map((p) => {

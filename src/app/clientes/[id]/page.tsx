@@ -1,9 +1,10 @@
 "use client";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo } from "react";
 import { AlertaCard } from "@/components/AlertaCard";
-import { ApiladoChart, BandaChart, COL, ServTicketChart, YoYChart } from "@/components/charts";
+import { ApiladoChart, BandaChart, CAT, COL, OTROS, SerieChart, YoYChart } from "@/components/charts";
 import { useDatos } from "@/components/DataProvider";
 import { Card, Empty, Eyebrow, Gauge, Kpi, nivel, Pill, PillSeg, Tabla } from "@/components/ui";
 import { puntosBanda } from "@/components/util";
@@ -11,7 +12,7 @@ import { DIAG_INFO } from "@/lib/anomaly";
 import { clp, clpCorto, MESES, mes, num, pct } from "@/lib/format";
 import { ETAPAS, type Etapa } from "@/lib/types";
 
-const PALETA = ["#0E7C86", "#175E9E", "#2E7D4F", "#B5820F", "#7A4BA8", "#9AA8AC"];
+const PALETA = [...CAT, OTROS];
 
 export default function Cliente() {
   const { id } = useParams<{ id: string }>();
@@ -74,7 +75,9 @@ export default function Cliente() {
   const anio = d.mesAnalisis.slice(0, 4);
   const ytd = M.periodos.filter((p) => p.startsWith(anio) && p <= d.mesAnalisis);
   const metaYtd = sc ? ytd.reduce((x, p) => x + (+sc.m[p] || 0), 0) : 0;
-  const realYtd = ytd.reduce((x, p) => x + (an.venta.puntos.find((q) => q.p === p)?.real || 0), 0);
+  // solo se compara la venta de los meses que tienen meta
+  const realYtd = sc ? ytd.filter((p) => +sc.m[p] > 0).reduce((x, p) => x + (an.venta.puntos.find((q) => q.p === p)?.real || 0), 0) : 0;
+  const mesesMeta = sc ? ytd.filter((p) => +sc.m[p] > 0).length : 0;
   const cumplYtd = metaYtd > 0 ? (realYtd / metaYtd) * 100 : null;
   const alertas = d.alertas.filter((a) => a.cliente === nombre);
   const contacto = d.contactos.clientes[nombre] ?? {};
@@ -82,10 +85,11 @@ export default function Cliente() {
 
   return (
     <div>
-      <div className="mb-1 text-xs"><Link href="/clientes" className="text-venta underline">← Clientes</Link></div>
+      <div className="mb-1 text-xs"><Link href="/clientes" className="inline-flex items-center gap-1 text-venta hover:underline"><ArrowLeft size={14} aria-hidden /> Clientes</Link></div>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-display text-[30px] leading-tight font-bold tracking-wide">{nombre}</h1>
         <PillSeg s={info.segmento} />
+        {info.calificacion && <Pill tono={/churn|perdido|inactivo/i.test(info.calificacion) ? "risk" : /spot|sin mov/i.test(info.calificacion) ? "warn" : "n"}>{info.calificacion}</Pill>}
         <Pill tono={di.tono}>{di.label}</Pill>
       </div>
       <p className="text-[12.5px] text-muted">
@@ -96,7 +100,7 @@ export default function Cliente() {
       <div className="mt-4 grid gap-3.5 md:grid-cols-2 xl:grid-cols-5">
         <Kpi k={`Venta ${mes(d.mesAnalisis)}`} tono={di.tono === "risk" ? "risk" : di.tono === "warn" ? "warn" : "venta"} v={clpCorto(dg.real)} d={dg.esperado ? <>Esperado {clpCorto(dg.esperado)} ({dg.real >= dg.esperado ? "+" : ""}{(((dg.real - dg.esperado) / dg.esperado) * 100).toFixed(0)}%)</> : "Sin historia suficiente"} />
         <Kpi k="Variación habitual" tono="n" v={`±${pct(an.venta.variacionTipica, 0)}`} d={`Rango normal mes a mes · ${an.venta.mesesActivos} meses con venta`} />
-        <Kpi k={`Cumplimiento ${anio}`} tono={nivel(cumplYtd, d.umbrales.umbralOk, d.umbrales.umbralAlerta)} v={pct(cumplYtd, 0)} d={metaYtd ? `${clpCorto(realYtd)} de ${clpCorto(metaYtd)}` : "Sin meta"}>
+        <Kpi k={`Cumplimiento ${anio}`} tono={nivel(cumplYtd, d.umbrales.umbralOk, d.umbrales.umbralAlerta)} v={pct(cumplYtd, 0)} d={metaYtd ? `${clpCorto(realYtd)} de ${clpCorto(metaYtd)} · ${mesesMeta} ${mesesMeta === 1 ? "mes" : "meses"} con meta` : "Sin meta"}>
           <div className="mt-2"><Gauge cumpl={cumplYtd} /></div>
         </Kpi>
         <Kpi k="Últimos 12 meses" v={clpCorto(r.venta)} d={`Margen ${pct(r.venta ? (r.util / r.venta) * 100 : null)} · ${num(r.nserv)} servicios`} />
@@ -124,8 +128,11 @@ export default function Cliente() {
         <Card titulo={`Año contra año${r.anios.length > 1 ? ` · ${r.anios.join(" vs ")}` : ""}`} sub="Mismo mes en años distintos: separa estacionalidad de pérdida real.">
           <YoYChart data={r.yoy} anios={r.anios} />
         </Card>
-        <Card titulo="Servicios y ticket promedio" sub="¿La baja es por menos servicios o por menor tarifa?">
-          <ServTicketChart data={r.serv} />
+        <Card titulo="Servicios y ticket promedio" sub="¿La baja es por menos servicios o por menor tarifa? Dos escalas, dos gráficos.">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div><div className="eyebrow mb-1">Servicios</div><SerieChart data={r.serv} k="serv" nombre="Servicios" formato="num" alto={190} /></div>
+            <div><div className="eyebrow mb-1">Ticket promedio</div><SerieChart data={r.serv} k="ticket" nombre="Ticket promedio" tipo="line" alto={190} /></div>
+          </div>
         </Card>
       </div>
 
@@ -152,7 +159,7 @@ export default function Cliente() {
 
       <div className="mt-3.5 grid gap-3.5 lg:grid-cols-[3fr_2fr]">
         <Card titulo="Servicios por etapa">
-          <ApiladoChart eje="num" data={r.et} alto={240} series={(["finalizado", "curso", "proyeccion", "sinclasif"] as Etapa[]).map((k) => ({ key: k, nombre: ETAPAS[k], color: { finalizado: COL.ok, curso: COL.warn, proyeccion: COL.meta, sinclasif: "#B9C4C2" }[k] }))} />
+          <ApiladoChart eje="num" data={r.et} alto={240} series={(["finalizado", "curso", "proyeccion", "sinclasif"] as Etapa[]).map((k) => ({ key: k, nombre: ETAPAS[k], color: COL.etapa[k] }))} />
         </Card>
         <Card titulo="Contacto del cliente" sub="Se usa para prellenar los correos de seguimiento. Se guarda en este navegador.">
           <label className="block text-[11px] font-semibold tracking-wider text-muted uppercase">Nombre de contacto

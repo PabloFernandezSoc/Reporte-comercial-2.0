@@ -1,4 +1,5 @@
 "use client";
+import { CalendarPlus, Mail } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useState } from "react";
@@ -113,8 +114,8 @@ export function AlertaCard({ a, compacta = false }: { a: Alerta; compacta?: bool
         >
           {Object.entries(ESTADOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <Btn peque primario onClick={() => setCorreo(true)}>✉ Enviar correo</Btn>
-        <Btn peque onClick={recordatorio} title="Descarga un evento .ics para Outlook / Google Calendar">📅 Recordatorio</Btn>
+        <Btn peque primario onClick={() => setCorreo(true)}><Mail size={14} aria-hidden /> Enviar correo</Btn>
+        <Btn peque onClick={recordatorio} title="Descarga un evento .ics para Outlook / Google Calendar"><CalendarPlus size={14} aria-hidden /> Recordatorio</Btn>
         <Btn peque onClick={() => setAbierta(!abierta)}>{abierta ? "Ocultar detalle" : "Ver detalle y bitácora"}</Btn>
         <span className="ml-auto text-[11px] text-muted">{mes(a.periodo)}</span>
       </div>

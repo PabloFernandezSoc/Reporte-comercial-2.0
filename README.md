@@ -60,6 +60,14 @@ Las metas reales **no se suben al repositorio** (es público). Opciones:
 
 Formato: ver `src/lib/types.ts` (`Metas`).
 
+**Propuesta de metas Q4 (Excel).** Mezcla el Excel en el archivo privado de metas:
+
+```bash
+npm run metas:q4 -- "ruta/Propuesta metas Q4.xlsx" 2026
+```
+
+Toma de la hoja *CARTERA CD* la meta Oct/Nov/Dic por cliente, su calificación y ejecutiva; de *Cartera FFWW* la meta FFWW y el total de carteras. Verifica que Total = FFWW + CD. El Resumen muestra el panel **Metas Q4** (meta vs real por mes y el ritmo del mes en curso).
+
 ### Correo
 
 Sin configuración, **Enviar correo** abre Outlook/Gmail con el borrador listo. Para envío directo define `RESEND_API_KEY` y `EMAIL_FROM` ([Resend](https://resend.com)).

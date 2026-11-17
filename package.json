@@ -8,10 +8,13 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "metas:q4": "tsx scripts/importar-metas-q4.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^0.577.0",
     "next": "^15.5.29",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
