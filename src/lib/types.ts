@@ -30,6 +30,7 @@ export interface MetaCliente {
   r?: Record<string, number>; // venta de referencia del scorecard
   cal?: string; // calificación comercial (ACTIVO, SPOT, Churn, INACTIVO…)
   x?: string; // ejecutiva responsable según el plan
+  sf?: "cartera-cd" | "cartera-ffww" | "cartera-total" | "scorecard" | "nombre"; // de dónde salió el segmento
 }
 
 export interface Metas {

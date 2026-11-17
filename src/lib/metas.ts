@@ -58,3 +58,13 @@ export class Cruce {
     return res;
   }
 }
+
+/**
+ * Clasificación provisoria FFWW / CD por nombre, para clientes que no aparecen en ninguna hoja de cartera.
+ * Forwarders y operadores logísticos → FFWW; el resto (importadores, retail, industria) → CD.
+ * Se marca como provisoria en la app para que el equipo la confirme.
+ */
+const RX_FFWW = /\b(LOGISTIC\w*|LOGISTICA|CARGO|FORWARD\w*|SHIPPING|FREIGHT|TRANSIT\w*|ADUAN\w*|LINE|LINES|WORLDWIDE|TRANSPORTES INTERNACIONALES|INTERNATIONAL|SUPPLY CHAIN|AIR|SEA|MARITIM\w*|NAVIER\w*|COURIER)\b/;
+export function segmentoPorNombre(nombre: string): "FFWW" | "CD" {
+  return RX_FFWW.test(normTxt(nombre)) ? "FFWW" : "CD";
+}

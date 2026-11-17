@@ -89,6 +89,7 @@ export default function Cliente() {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-display text-[30px] leading-tight font-bold tracking-wide">{nombre}</h1>
         <PillSeg s={info.segmento} />
+        {info.segProvisorio && <span title="Segmento deducido por el nombre: confírmalo en Metas → Cruce de nombres"><Pill tono="warn">segmento provisorio</Pill></span>}
         {info.calificacion && <Pill tono={/churn|perdido|inactivo/i.test(info.calificacion) ? "risk" : /spot|sin mov/i.test(info.calificacion) ? "warn" : "n"}>{info.calificacion}</Pill>}
         <Pill tono={di.tono}>{di.label}</Pill>
       </div>

@@ -158,7 +158,7 @@ export function MetaMesPanel() {
             </tr>
           </thead>
           <tbody>
-            {r.filas.map((f) => (
+            {r.filas.filter((f) => f.k !== "OTROS" || f.tot.v || f.prog.v).map((f) => (
               <tr key={f.k} className={f.k === "TOTAL" ? "bg-[#F7F9F8] font-semibold" : ""}>
                 <td>{f.n}</td>
                 {r.semanas.map((s) => <td key={s} className="r">{f.real[s] ? clpCorto(f.real[s].v) : "—"}</td>)}
@@ -188,7 +188,7 @@ export function MetaMesPanel() {
         <p className="mt-2 text-[12px] text-warn">La meta total ({clp(tot.meta)}) no es igual a FFWW + CD ({clp(r.sumaSeg)}). Revísala en Metas.</p>
       )}
       <p className="mt-2 text-[11.5px] text-muted">
-        "Otros / sin clasificar" agrupa CAPEX, CHURN y clientes sin cruce con el plan; cuentan en el total pero no en FFWW ni CD.
+        Cartera según el Excel de metas; los clientes que no aparecen ahí se clasifican provisoriamente por nombre (ver docs/DATOS-FALTANTES-API.md).
         Semanas ISO según la fecha de presentación del servicio.
       </p>
 

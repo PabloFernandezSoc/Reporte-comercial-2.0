@@ -72,6 +72,10 @@ Toma de la hoja *CARTERA CD* la meta Oct/Nov/Dic por cliente, su calificación y
 
 Sin configuración, **Enviar correo** abre Outlook/Gmail con el borrador listo. Para envío directo define `RESEND_API_KEY` y `EMAIL_FROM` ([Resend](https://resend.com)).
 
+## Datos que faltan en la API
+
+La API de Bit no entrega cartera (FFWW / CD), ejecutiva, calificación ni metas, y algunos servicios llegan sin fecha. El detalle, cómo se suple cada dato hoy y qué pedir al ERP está en [docs/DATOS-FALTANTES-API.md](docs/DATOS-FALTANTES-API.md).
+
 ## Despliegue
 
 Compatible con Vercel: importar el repo y definir las variables de entorno. `npm run build` para verificar.

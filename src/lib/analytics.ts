@@ -9,7 +9,7 @@ import {
   type Umbrales,
 } from "./anomaly";
 import { clp, mes, pct, rangoPeriodos, sumarMes } from "./format";
-import { Cruce } from "./metas";
+import { Cruce, segmentoPorNombre } from "./metas";
 import type { Etapa, Hecho, MetaCliente, Metas, RespuestaDatos } from "./types";
 
 export interface Filtros {
@@ -27,6 +27,7 @@ export interface InfoCliente {
   scorecard: MetaCliente | null;
   ejecutiva: string;
   calificacion: string;
+  segProvisorio: boolean; // segmento deducido por nombre: confirmar
 }
 
 export interface Modelo {
@@ -61,7 +62,9 @@ export function construirModelo(datos: RespuestaDatos, metas: Metas | null, alia
     const sc = cruce.buscar(c);
     // si el ERP no informa ejecutiva, se usa la del plan de metas
     const eje = [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || sc?.x || "";
-    clientes.set(c, { nombre: c, segmento: sc?.s ?? "SIN CLASIFICAR", scorecard: sc, ejecutiva: eje, calificacion: sc?.cal ?? "" });
+    // sin fila en el plan: segmento provisorio por nombre para que los totales por cartera cuadren
+    const seg = sc && (sc.s === "FFWW" || sc.s === "CD") ? sc.s : segmentoPorNombre(c);
+    clientes.set(c, { nombre: c, segmento: seg, scorecard: sc, ejecutiva: eje, calificacion: sc?.cal ?? "", segProvisorio: !sc || sc.sf === "nombre" });
   }
   const ejecutivas = [...new Set([...clientes.values()].map((c) => c.ejecutiva).filter(Boolean))].sort();
   const segmentos = ["FFWW", "CD", "CAPEX", "CHURN", "SIN CLASIFICAR"].filter((s) => [...clientes.values()].some((c) => c.segmento === s));

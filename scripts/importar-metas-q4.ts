@@ -12,7 +12,7 @@
 import ExcelJS from "exceljs";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import { clave } from "../src/lib/metas";
+import { clave, segmentoPorNombre } from "../src/lib/metas";
 import type { MetaCliente, Metas } from "../src/lib/types";
 
 type Celda = ExcelJS.CellValue;
@@ -108,6 +108,7 @@ async function main() {
       nuevos++;
     } else actualizados++;
     o.s = "CD"; // la cartera vigente manda sobre el segmento del scorecard original
+    o.sf = "cartera-cd";
     P.forEach((p, k) => { if (q.m[k]) o!.m[p] = q.m[k]; else delete o!.m[p]; });
     if (q.cal) o.cal = q.cal.replace(/\s+/g, " ").trim();
     if (q.x) o.x = q.x;
@@ -126,7 +127,27 @@ async function main() {
       ffNuevos++;
     } else ffAct++;
     o.s = "FFWW";
+    o.sf = "cartera-ffww";
     if (q.x) o.x = q.x;
+  }
+
+  // resto del plan: hoja CARTERA TOTAL, luego segmento original FFWW/CD, luego regla por nombre
+  const total = new Map<string, string>();
+  wb.getWorksheet("CARTERA TOTAL")?.eachRow((r, i) => {
+    if (i === 1) return;
+    const n = texto(val(r.getCell(1).value));
+    const sg = texto(val(r.getCell(2).value)).toUpperCase();
+    if (n && !total.has(clave(n))) total.set(clave(n), sg);
+  });
+  const fuentes: Record<string, number> = {};
+  for (const o of metas.clientes) {
+    if (o.sf === "cartera-cd" || o.sf === "cartera-ffww") { fuentes[o.sf] = (fuentes[o.sf] || 0) + 1; continue; }
+    const t = total.get(clave(o.c)) ?? "";
+    if (/FFWW/.test(t)) { o.s = "FFWW"; o.sf = "cartera-total"; }
+    else if (/^CD/.test(t)) { o.s = "CD"; o.sf = "cartera-total"; }
+    else if (o.s === "FFWW" || o.s === "CD") o.sf = "scorecard";
+    else { if (/CHURN/.test(t) || o.s === "CHURN") o.cal ||= "Churn"; o.s = segmentoPorNombre(o.c); o.sf = "nombre"; }
+    fuentes[o.sf] = (fuentes[o.sf] || 0) + 1;
   }
   metas.q4 = { archivo: path.basename(archivo), importado: new Date().toISOString(), periodos: P };
   mkdirSync(path.dirname(ruta), { recursive: true });
@@ -138,6 +159,7 @@ async function main() {
   console.log(`  CD:      ${segCD.map(fmt).join(" · ")}`);
   console.log(`  Clientes CD: ${actualizados} actualizados, ${nuevos} nuevos`);
   console.log(`  Clientes FFWW (segmento): ${ffAct} reasignados, ${ffNuevos} nuevos`);
+  console.log(`  Origen del segmento: ${JSON.stringify(fuentes)}`);
 }
 
 main().catch((e) => {
