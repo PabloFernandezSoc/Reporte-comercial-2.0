@@ -2,7 +2,7 @@
 import { PageHeader } from "@/components/PageHeader";
 import { Download } from "lucide-react";
 import { useDatos } from "@/components/DataProvider";
-import { Aviso, Btn, Card, Eyebrow, Tabla } from "@/components/ui";
+import { Aviso, Btn, Card, Eyebrow, Pill, Tabla } from "@/components/ui";
 import { UMBRALES_DEF, type Umbrales } from "@/lib/anomaly";
 import { clp, num } from "@/lib/format";
 import { descargar } from "@/lib/storage";
@@ -22,6 +22,13 @@ export default function Config() {
   const u = d.umbrales;
   const ct = d.contactos;
   const inp = "mt-0.5 w-full rounded border border-line px-2.5 py-1.5 text-[13px] font-normal tracking-normal normal-case text-ink focus:outline-2 focus:outline-venta";
+
+  const sf = d.datos?.sinFechaLista ?? [];
+  const exportarSinFecha = () => {
+    const f = [["ServicioID", "Cliente", "Estado", "Tipo", "Venta", "Extracosto", "Otra fecha (retiro/ingreso/ETA)"]];
+    sf.forEach((x) => f.push([x.id, x.cliente, x.estado, x.tipo, String(Math.round(x.venta)), x.extracosto ? "Sí" : "No", x.otraFecha]));
+    descargar("servicios-sin-fecha.csv", "﻿" + f.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
+  };
 
   const exportarHechos = () => {
     if (!d.datos) return;
@@ -88,6 +95,47 @@ export default function Config() {
             </Tabla>
           </Card>
         </div>
+      )}
+
+      {d.datos?.sinFechaEstado && (
+        <>
+          <Eyebrow>Servicios sin fecha de presentación</Eyebrow>
+          <div className="grid gap-3.5 lg:grid-cols-[1fr_2fr]">
+            <Card titulo="Por estado" sub="Proyección sin fecha es normal (aún no se agenda). Anulados se excluyen antes. El resto es un dato faltante en Bit.">
+              <Tabla>
+                <thead><tr><th>Estado</th><th className="r">Servicios</th><th className="r">Venta</th><th>Lectura</th></tr></thead>
+                <tbody>
+                  {Object.entries(d.datos.sinFechaEstado).sort((a, b) => b[1].venta - a[1].venta).map(([g, o]) => (
+                    <tr key={g}>
+                      <td className="text-[12px]">{g}</td>
+                      <td className="r">{num(o.servicios)}</td>
+                      <td className="r">{clp(o.venta)}</td>
+                      <td>{o.etapa === "proyeccion" ? <Pill tono="ok">Normal</Pill> : o.venta ? <Pill tono="risk">Corregir</Pill> : <Pill tono="n">Sin venta</Pill>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Tabla>
+            </Card>
+            <Card titulo={`Para corregir en Bit (${sf.filter((x) => !x.extracosto).length} servicios)`} sub="Servicios en curso sin fecha de presentación ni período: quedan fuera de la venta del mes hasta que se completen." accion={sf.length ? <Btn peque onClick={exportarSinFecha}><Download size={14} aria-hidden /> CSV</Btn> : undefined}>
+              {sf.length ? (
+                <Tabla alto={320}>
+                  <thead><tr><th>Servicio</th><th>Cliente</th><th>Estado</th><th className="r">Venta</th><th>Otra fecha</th></tr></thead>
+                  <tbody>
+                    {sf.map((x, i) => (
+                      <tr key={i}>
+                        <td className="num text-[12px]">{x.id || "—"}{x.extracosto && <span className="ml-1 text-muted">(extra)</span>}</td>
+                        <td className="max-w-[260px] truncate text-[12px]" title={x.cliente}>{x.cliente}</td>
+                        <td className="text-[12px]">{x.estado}</td>
+                        <td className="r">{clp(x.venta)}</td>
+                        <td className="num text-[12px] text-muted">{x.otraFecha || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Tabla>
+              ) : <p className="text-[13px] text-muted">No hay servicios en curso sin fecha.</p>}
+            </Card>
+          </div>
+        </>
       )}
 
       <Eyebrow>Respaldo</Eyebrow>

@@ -68,7 +68,7 @@ export async function obtenerDatos(forzar = false): Promise<RespuestaDatos> {
     data = {
       fuente: "demo", actualizado: new Date().toISOString(), hoy, filas: n.filas, mapeo: n.mapeo,
       avisos: ["Mostrando datos DEMO ficticios. Configura ERP_API_KEY en .env.local para usar Bit ERP."],
-      hechos: n.hechos, ultimaFecha: n.ultimaFecha, metas: demo.metas, metasFuente: "demo", anulados: n.anulados, muestra: n.muestra, dims: n.dims,
+      hechos: n.hechos, ultimaFecha: n.ultimaFecha, metas: demo.metas, metasFuente: "demo", anulados: n.anulados, muestra: n.muestra, dims: n.dims, sinFechaEstado: n.sinFechaEstado, sinFechaLista: n.sinFechaLista,
     };
   } else {
     let mapeoManual: Record<string, string> = {};
@@ -81,7 +81,7 @@ export async function obtenerDatos(forzar = false): Promise<RespuestaDatos> {
     const n = normalizar(json, mapeoManual, hoy);
     data = {
       fuente: "erp", actualizado: new Date().toISOString(), hoy, filas: n.filas, mapeo: n.mapeo, avisos: n.avisos,
-      hechos: n.hechos, ultimaFecha: n.ultimaFecha, metas: privadas, metasFuente: privadas ? "privado" : "ninguna", anulados: n.anulados, muestra: n.muestra, dims: n.dims,
+      hechos: n.hechos, ultimaFecha: n.ultimaFecha, metas: privadas, metasFuente: privadas ? "privado" : "ninguna", anulados: n.anulados, muestra: n.muestra, dims: n.dims, sinFechaEstado: n.sinFechaEstado, sinFechaLista: n.sinFechaLista,
     };
     if (!privadas) data.avisos.push("No hay metas cargadas en el servidor. Impórtalas en la pestaña Metas o define METAS_PATH.");
   }

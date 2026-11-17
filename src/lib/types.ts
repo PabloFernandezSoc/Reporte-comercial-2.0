@@ -53,6 +53,8 @@ export interface RespuestaDatos {
   anulados: { servicios: number; venta: number };
   muestra?: Record<string, unknown>[]; // primeras filas crudas del ERP (diagnóstico de mapeo)
   dims?: Record<string, Record<string, number>>; // venta por valores de columnas categóricas
+  sinFechaEstado?: Record<string, { servicios: number; venta: number; etapa: string }>; // servicios sin fecha, por estado
+  sinFechaLista?: { id: string; cliente: string; estado: string; tipo: string; venta: number; extracosto: boolean; otraFecha: string }[]; // servicios en curso sin fecha
 }
 
 export const SEGMENTOS = ["FFWW", "CD", "CAPEX", "CHURN", "SIN CLASIFICAR"] as const;

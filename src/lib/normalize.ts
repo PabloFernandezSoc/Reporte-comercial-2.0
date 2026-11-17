@@ -157,8 +157,10 @@ export function glosaEstado(v: unknown): string {
 export function etapaDe(v: unknown): Etapa | "anulado" {
   const g = glosaEstado(v);
   if (!g) return "sinclasif";
-  if (g === "PROYECCION DE CARGA") return "proyeccion";
-  if (g === "VALIDADO") return "finalizado";
+  // según la tabla de estados de Bit (columna "Se considera en curso"):
+  // proyección y coordinación aún no son servicio en curso; finalizado, validación y validado ya terminaron
+  if (g === "PROYECCION DE CARGA" || g === "EN COORDINACION") return "proyeccion";
+  if (g === "SERVICIO FINALIZADO" || g === "VALIDACION COSTUMER SERVICE" || g === "VALIDADO") return "finalizado";
   if (g === "ANULADO") return "anulado";
   return GLOSAS_BIT.has(g) ? "curso" : "sinclasif";
 }
@@ -187,6 +189,18 @@ export interface ResultadoNormalizado {
   anulados: { servicios: number; venta: number };
   muestra: Record<string, unknown>[];
   dims?: Record<string, Record<string, number>>;
+  sinFechaEstado?: Record<string, { servicios: number; venta: number; etapa: string }>;
+  sinFechaLista: ServicioSinFecha[];
+}
+
+export interface ServicioSinFecha {
+  id: string;
+  cliente: string;
+  estado: string;
+  tipo: string;
+  venta: number;
+  extracosto: boolean;
+  otraFecha: string; // retiro / ingreso a planta / ETA, como referencia
 }
 
 export function normalizar(json: unknown, mapeoManual: Record<string, string> = {}, hoy = "9999-12-31"): ResultadoNormalizado {
@@ -194,8 +208,10 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
   const avisos: string[] = [];
   const anulados = { servicios: 0, venta: 0 };
   const sinFecha = { servicios: 0, venta: 0 };
+  const sinFechaLista: ServicioSinFecha[] = [];
+  const sinFechaEstado: Record<string, { servicios: number; venta: number; etapa: string }> = {};
   if (!filas.length) {
-    return { hechos: [], ultimaFecha: {}, mapeo: {}, filas: 0, avisos: ["La API no devolvió filas."], anulados, muestra: [] };
+    return { hechos: [], ultimaFecha: {}, mapeo: {}, filas: 0, avisos: ["La API no devolvió filas."], anulados, muestra: [], sinFechaLista: [] };
   }
   const M = { ...autoMapear(filas), ...mapeoManual };
   if (!M.cliente) avisos.push("No se detectó el campo de cliente. Define ERP_FIELD_MAP.");
@@ -280,8 +296,18 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
       continue;
     }
     if (!t.periodo) {
-      sinFecha.servicios += servicios;
-      sinFecha.venta += t.venta;
+      // sin fecha: es esperable en proyección (aún sin agendar); en otros estados es un dato faltante
+      const g = glosaEstado((b && b.estado) || t.estado) || "(sin estado)";
+      const o = (sinFechaEstado[g] ||= { servicios: 0, venta: 0, etapa });
+      o.servicios += servicios;
+      o.venta += t.venta;
+      if (etapa !== "proyeccion" && t.venta) {
+        const f = filas[t.i];
+        const otraFecha = ["fechaRetiro", "inPlanta", "eta"].map((c) => fechaValida(aFecha(f[c]))[1]).find(Boolean) ?? "";
+        sinFechaLista.push({ id: t.id, cliente: t.cliente || "(sin cliente)", estado: g, tipo: t.tipo, venta: t.venta, extracosto: !t.esFlete, otraFecha });
+        sinFecha.servicios += servicios;
+        sinFecha.venta += t.venta;
+      }
       continue;
     }
     const cliente = t.cliente || "(sin cliente)";
@@ -301,7 +327,7 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
   }
   const hechos = [...agg.values()].map((h) => ({ ...h, v: Math.round(h.v), k: Math.round(h.k), u: Math.round(h.u) }));
   if (sinFecha.servicios || sinFecha.venta)
-    avisos.push(`${sinFecha.servicios.toLocaleString("es-CL")} servicios ($${Math.round(sinFecha.venta).toLocaleString("es-CL")}) vienen del ERP sin fecha válida y quedaron fuera del análisis.`);
+    avisos.push(`${sinFecha.servicios.toLocaleString("es-CL")} servicios en curso ($${Math.round(sinFecha.venta).toLocaleString("es-CL")}) vienen de Bit sin fecha de presentación ni período y quedaron fuera del análisis. Revisa la lista en Configuración → Datos para corregirlos en el ERP.`);
   // diagnóstico: venta por valores de columnas categóricas candidatas a segmento
   const dims: Record<string, Record<string, number>> = {};
   for (const col of ["unegocio", "servicioTipo", "familia", "modalidad"]) {
@@ -309,5 +335,5 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
     const o: Record<string, number> = (dims[col] = {});
     filas.forEach((f) => { const k = String(f[col] ?? ""); o[k] = (o[k] || 0) + aNumero(f[M.venta]); });
   }
-  return { hechos, ultimaFecha, mapeo: M, filas: filas.length, avisos, anulados, muestra: filas.slice(0, 5), dims };
+  return { hechos, ultimaFecha, mapeo: M, filas: filas.length, avisos, anulados, muestra: filas.slice(0, 5), dims, sinFechaEstado, sinFechaLista };
 }
