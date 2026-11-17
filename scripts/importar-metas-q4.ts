@@ -75,6 +75,15 @@ async function main() {
     if (enQ4 && /^META FFWW$/i.test(t)) segFF.push(numero(val(r.getCell(5).value)));
     if (/^(Oct|Nov|Dic)$/i.test(t)) general.push(numero(val(r.getCell(3).value)));
   });
+  // clientes de la cartera FFWW (columna A hasta "TOTALES"; filas con segmento en columna B)
+  const clientesFF: { c: string; x: string }[] = [];
+  let finFF = false;
+  ff.eachRow((r, i) => {
+    if (i === 1 || finFF) return;
+    const nombre = texto(val(r.getCell(1).value));
+    if (/^TOTALES$/i.test(nombre)) { finFF = true; return; }
+    if (nombre && /FFWW/i.test(texto(val(r.getCell(2).value)))) clientesFF.push({ c: nombre, x: texto(val(r.getCell(3).value)) });
+  });
   if (segFF.length !== 3 || general.length !== 3) throw new Error(`No se encontró el bloque Q4 completo (FFWW=${segFF.length}, total=${general.length})`);
   const cuadre = general.map((g, k) => g - segFF[k] - segCD[k]);
   if (cuadre.some((d) => Math.abs(d) > 1)) console.warn("⚠ El total no cuadra con FFWW + CD:", cuadre);
@@ -98,8 +107,25 @@ async function main() {
       idx.set(clave(q.c), o);
       nuevos++;
     } else actualizados++;
+    o.s = "CD"; // la cartera vigente manda sobre el segmento del scorecard original
     P.forEach((p, k) => { if (q.m[k]) o!.m[p] = q.m[k]; else delete o!.m[p]; });
     if (q.cal) o.cal = q.cal.replace(/\s+/g, " ").trim();
+    if (q.x) o.x = q.x;
+  }
+  let ffAct = 0, ffNuevos = 0;
+  const vistosFF = new Set<string>();
+  for (const q of clientesFF) {
+    const k = clave(q.c);
+    if (vistosFF.has(k)) continue;
+    vistosFF.add(k);
+    let o = idx.get(k);
+    if (!o) {
+      o = { c: q.c.toUpperCase(), s: "FFWW", m: {} };
+      metas.clientes.push(o);
+      idx.set(k, o);
+      ffNuevos++;
+    } else ffAct++;
+    o.s = "FFWW";
     if (q.x) o.x = q.x;
   }
   metas.q4 = { archivo: path.basename(archivo), importado: new Date().toISOString(), periodos: P };
@@ -111,6 +137,7 @@ async function main() {
   console.log(`  FFWW:    ${segFF.map(fmt).join(" · ")}`);
   console.log(`  CD:      ${segCD.map(fmt).join(" · ")}`);
   console.log(`  Clientes CD: ${actualizados} actualizados, ${nuevos} nuevos`);
+  console.log(`  Clientes FFWW (segmento): ${ffAct} reasignados, ${ffNuevos} nuevos`);
 }
 
 main().catch((e) => {
