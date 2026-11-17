@@ -86,7 +86,8 @@ function TT({ active, payload, label, fmt, extra }: { active?: boolean; payload?
 }
 
 /* ---------- venta vs meta mensual (un eje; el % va en el tooltip y en la tabla) ---------- */
-export function VentaMetaChart({ data }: { data: { p: string; venta: number; meta: number; cumpl: number | null; enCurso?: boolean }[] }) {
+export function VentaMetaChart({ data }: { data: { p: string; venta: number; prog?: number; meta: number; cumpl: number | null; enCurso?: boolean }[] }) {
+  const hayProg = data.some((x) => (x.prog ?? 0) > 0);
   return (
     <Caja resumen="Venta mensual contra la meta">
       <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
@@ -95,9 +96,8 @@ export function VentaMetaChart({ data }: { data: { p: string; venta: number; met
         <YAxis {...ejeClp} />
         <Tooltip cursor={{ fill: "rgba(13,27,36,.04)" }} content={<TT extra={(p) => (p.cumpl != null ? <>Cumplimiento <b className="num text-ink">{pct(p.cumpl as number)}</b>{p.enCurso ? " · mes en curso" : ""}</> : "Sin meta")} />} />
         <Legend {...leyenda} />
-        <Bar dataKey="venta" name="Venta" fill={COL.venta} radius={R}>
-          {data.map((d) => <Cell key={d.p} fill={d.enCurso ? COL.ventaClaro : COL.venta} />)}
-        </Bar>
+        <Bar dataKey="venta" name="Venta realizada" stackId="v" fill={COL.venta} radius={hayProg ? 0 : R} />
+        {hayProg && <Bar dataKey="prog" name="Programado" stackId="v" fill={COL.ventaClaro} radius={R} />}
         <Line dataKey={(d: { meta: number }) => (d.meta > 0 ? d.meta : null)} name="Meta" stroke={COL.meta} strokeWidth={2} type="step" dot={false} connectNulls={false} />
       </ComposedChart>
     </Caja>

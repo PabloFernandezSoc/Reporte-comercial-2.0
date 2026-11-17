@@ -75,3 +75,26 @@ export function avanceMes(hoy: string): { transcurrido: number; total: number; f
   }
   return { transcurrido: trans, total, fraccion: total ? trans / total : 1 };
 }
+
+/** Semana ISO 8601 de una fecha YYYY-MM-DD, como "2026-W46". */
+export function semanaIso(fecha: string): string {
+  const [y, m, d] = fecha.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d));
+  const dia = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dia); // jueves de la semana
+  const inicio = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  const n = Math.ceil(((t.getTime() - inicio.getTime()) / 86400000 + 1) / 7);
+  return `${t.getUTCFullYear()}-W${String(n).padStart(2, "0")}`;
+}
+
+/** Lunes y domingo (YYYY-MM-DD) de una semana ISO. */
+export function rangoSemana(w: string): [string, string] {
+  const [y, n] = w.split("-W").map(Number);
+  const ene4 = new Date(Date.UTC(y, 0, 4));
+  const lunes = new Date(ene4);
+  lunes.setUTCDate(ene4.getUTCDate() - ((ene4.getUTCDay() || 7) - 1) + (n - 1) * 7);
+  const dom = new Date(lunes);
+  dom.setUTCDate(lunes.getUTCDate() + 6);
+  const f = (x: Date) => x.toISOString().slice(0, 10);
+  return [f(lunes), f(dom)];
+}

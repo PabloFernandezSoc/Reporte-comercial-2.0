@@ -1,28 +1,30 @@
 "use client";
 import { PageHeader } from "@/components/PageHeader";
-import { Q4Panel } from "@/components/Q4Panel";
+import { MetaMesPanel } from "@/components/MetaMesPanel";
+import { VariacionPanel } from "@/components/VariacionPanel";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AlertaCard } from "@/components/AlertaCard";
-import { ApiladoChart, AcumuladoChart, COL, PuenteChart, SegmentosChart, Sparkline, VentaMetaChart, type PasoPuente } from "@/components/charts";
+import { ApiladoChart, AcumuladoChart, COL, SegmentosChart, Sparkline, VentaMetaChart } from "@/components/charts";
 import { useDatos } from "@/components/DataProvider";
 import { Heatmap } from "@/components/Heatmap";
 import { Card, Empty, Eyebrow, Gauge, Kpi, nivel, Tabla, Variacion } from "@/components/ui";
-import { agruparClientes, etiquetaFuenteMeta, hechosFiltrados, metaPeriodo, periodosFiltrados, proyeccionAnual, serieMensual } from "@/lib/analytics";
-import { avanceMes, clp, clpCorto, mes, num, pct, sumarMes } from "@/lib/format";
+import { agruparClientes, esRealizado, hechosFiltrados, metaPeriodo, periodosFiltrados, proyeccionAnual, serieMensual } from "@/lib/analytics";
+import { clp, clpCorto, mes, num, pct } from "@/lib/format";
 import { ETAPAS } from "@/lib/types";
 
 export default function Resumen() {
   const d = useDatos();
   const { modelo: M, filtros: F } = d;
-  const [modoPuente, setModoPuente] = useState<"mes" | "anio">("mes");
 
   const r = useMemo(() => {
     if (!M) return null;
     const periodos = periodosFiltrados(M, F);
-    const hechos = hechosFiltrados(M, F);
+    // serie con lo programado aparte; el resto de los cálculos usa solo venta realizada
+    const conProg = hechosFiltrados(M, F, { incluirProgramado: true });
+    const hechos = conProg.filter((h) => F.etapa || esRealizado(h));
     const lista = agruparClientes(M, F, hechos, periodos);
-    const serie = serieMensual(hechos, periodos).map((s) => {
+    const serie = serieMensual(conProg, periodos).map((s) => {
       const mt = metaPeriodo(M, F, s.p, lista);
       return { ...s, meta: mt.v, fuente: mt.fuente, cumpl: mt.v > 0 ? (s.venta / mt.v) * 100 : null, enCurso: s.p === M.mesActual };
     });
@@ -43,28 +45,6 @@ export default function Resumen() {
       return { p: x.p, real: x.real != null ? aR : null, meta: aM || null, proy: x.real == null || x.p === M.mesCerrado ? aP : null };
     });
     const cierre = acum[acum.length - 1];
-    // puente de variación
-    const pB = d.mesAnalisis;
-    const pA = modoPuente === "mes" ? sumarMes(pB, -1) : sumarMes(pB, -12);
-    const porCli = new Map<string, [number, number]>();
-    for (const h of hechosFiltrados(M, { ...F, desde: pA, hasta: pB })) {
-      if (h.p !== pA && h.p !== pB) continue;
-      const v = porCli.get(h.c) ?? [0, 0];
-      v[h.p === pA ? 0 : 1] += h.v;
-      porCli.set(h.c, v);
-    }
-    const movs = [...porCli.entries()].map(([c, [a, b]]) => ({ c, delta: b - a }));
-    const totA = [...porCli.values()].reduce((x, v) => x + v[0], 0);
-    const totB = [...porCli.values()].reduce((x, v) => x + v[1], 0);
-    const orden = [...movs].sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta));
-    const top = orden.slice(0, 10);
-    const resto = orden.slice(10).reduce((x, m) => x + m.delta, 0);
-    const pasos: PasoPuente[] = [
-      { nombre: mes(pA), delta: totA, tipo: "ini" },
-      ...top.sort((x, y) => y.delta - x.delta).map((m) => ({ nombre: m.c, delta: m.delta, tipo: "mov" as const })),
-      ...(Math.abs(resto) > 0 ? [{ nombre: `Otros ${orden.length - 10 > 0 ? orden.length - 10 : ""}`.trim(), delta: resto, tipo: "mov" as const }] : []),
-      { nombre: mes(pB), delta: totB, tipo: "fin" },
-    ];
     // segmentos y etapas
     const segData = periodos.map((p) => {
       const o: Record<string, number | string> = { p };
@@ -79,8 +59,8 @@ export default function Resumen() {
       segData[i][s] = (segData[i][s] as number) + h.v;
     }
     const etData = serie.map((s) => ({ p: s.p, ...s.etapas }));
-    return { periodos, lista, serie, tot, acum, cierre, anio, pasos, totA, totB, pA, pB, segData, etData };
-  }, [M, F, d.mesAnalisis, modoPuente]);
+    return { periodos, lista, serie, tot, acum, cierre, anio, segData, etData };
+  }, [M, F, d.mesAnalisis]);
 
   if (!M || !r) return <Empty>Sin datos. Pulsa <b>Actualizar</b>.</Empty>;
   if (!r.serie.length) return <Empty>No hay datos para el rango seleccionado.</Empty>;
@@ -98,8 +78,6 @@ export default function Resumen() {
   const cierreCumpl = r.cierre?.meta ? ((r.cierre.proy ?? r.cierre.real ?? 0) / r.cierre.meta) * 100 : null;
   const abiertas = d.alertas.filter((a) => !["resuelta", "descartada"].includes(d.gestion[a.id]?.estado ?? "nueva"));
   const enRiesgo = abiertas.filter((a) => a.prioridad === 1);
-  const actual = serie.find((s) => s.enCurso);
-  const av = avanceMes(M.datos.hoy);
 
   return (
     <div>
@@ -123,19 +101,20 @@ export default function Resumen() {
         </Link>
       </div>
 
-      {actual && (
-        <div className="mt-3 rounded border border-line bg-surface px-4 py-2.5 text-[13px]">
-          <b>{mes(actual.p)} en curso</b> ({av.transcurrido} de {av.total} días hábiles): {clp(actual.venta)} registrados
-          {actual.meta > 0 && <> · {pct((actual.venta / actual.meta) * 100, 0)} de la meta del mes</>} · ritmo esperado a la fecha {pct(av.fraccion * 100, 0)}.
-          <span className="text-muted"> Incluye servicios en proyección y en curso.</span>
-        </div>
-      )}
+      <Eyebrow>Metas del mes</Eyebrow>
+      <MetaMesPanel />
 
-      <div className="mt-5"><Q4Panel /></div>
+      <Eyebrow>Variación entre períodos</Eyebrow>
+      <VariacionPanel />
+
+      <Eyebrow>Mapa de salud de clientes</Eyebrow>
+      <Card titulo="Venta mensual de cada cliente vs su comportamiento normal" sub="Cada celda compara la venta del mes con lo esperado para ese cliente según su propia historia y estacionalidad. Un rojo intenso no es una fluctuación normal.">
+        <Heatmap analisis={d.analisis} />
+      </Card>
 
       <Eyebrow>Evolución contra meta</Eyebrow>
       <div className="grid gap-3.5 lg:grid-cols-[3fr_2fr]">
-        <Card titulo="Venta contra meta por mes" sub="Barras: venta (la clara es el mes en curso). Línea: meta del mes. El % de cumplimiento aparece al pasar el cursor y en el detalle mensual.">
+        <Card titulo="Venta contra meta por mes" sub="Barras: venta realizada y, en claro, lo programado del mes en curso. Línea: meta del mes. El % de cumplimiento aparece al pasar el cursor y en el detalle mensual.">
           <VentaMetaChart data={serie} />
         </Card>
         <Card titulo={`Acumulado ${r.anio} y proyección de cierre`} sub="La proyección usa el ritmo de los últimos 3 meses cerrados ajustado por estacionalidad.">
@@ -143,27 +122,6 @@ export default function Resumen() {
         </Card>
       </div>
 
-      <Eyebrow>¿Qué explica la variación?</Eyebrow>
-      <Card
-        titulo={`Puente de venta: ${mes(r.pA)} → ${mes(r.pB)}`}
-        sub={`De ${clp(r.totA)} a ${clp(r.totB)} (${r.totA ? ((r.totB - r.totA) / r.totA * 100).toFixed(0) : "—"}%). Los 10 clientes que más movieron la aguja.`}
-        accion={
-          <div className="flex gap-1 text-xs">
-            {(["mes", "anio"] as const).map((m) => (
-              <button key={m} onClick={() => setModoPuente(m)} className={`cursor-pointer rounded border px-2.5 py-1 ${modoPuente === m ? "border-ink bg-ink text-white" : "border-line"}`}>
-                {m === "mes" ? "vs mes anterior" : "vs mismo mes año anterior"}
-              </button>
-            ))}
-          </div>
-        }
-      >
-        <PuenteChart pasos={r.pasos} />
-      </Card>
-
-      <Eyebrow>Mapa de salud de clientes</Eyebrow>
-      <Card titulo="Venta mensual de los principales clientes vs su comportamiento normal" sub="Cada celda compara la venta del mes con lo esperado para ese cliente según su propia historia y estacionalidad. Un rojo intenso no es una fluctuación normal.">
-        <Heatmap analisis={d.analisis} />
-      </Card>
 
       <div className="mt-3.5 grid gap-3.5 lg:grid-cols-2">
         <Card titulo="Venta por segmento" sub="Composición mensual de la venta.">

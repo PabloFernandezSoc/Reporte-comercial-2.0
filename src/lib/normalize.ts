@@ -5,6 +5,7 @@
  * El resultado se agrega a "hechos" compactos para que el navegador reciba poco volumen.
  */
 import ESTADOS_BIT from "./estados-bit.json";
+import { semanaIso } from "./format";
 import type { Etapa, Hecho } from "./types";
 
 type Fila = Record<string, unknown>;
@@ -184,6 +185,8 @@ export interface ResultadoNormalizado {
   filas: number;
   avisos: string[];
   anulados: { servicios: number; venta: number };
+  muestra: Record<string, unknown>[];
+  dims?: Record<string, Record<string, number>>;
 }
 
 export function normalizar(json: unknown, mapeoManual: Record<string, string> = {}, hoy = "9999-12-31"): ResultadoNormalizado {
@@ -192,7 +195,7 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
   const anulados = { servicios: 0, venta: 0 };
   const sinFecha = { servicios: 0, venta: 0 };
   if (!filas.length) {
-    return { hechos: [], ultimaFecha: {}, mapeo: {}, filas: 0, avisos: ["La API no devolvió filas."], anulados };
+    return { hechos: [], ultimaFecha: {}, mapeo: {}, filas: 0, avisos: ["La API no devolvió filas."], anulados, muestra: [] };
   }
   const M = { ...autoMapear(filas), ...mapeoManual };
   if (!M.cliente) avisos.push("No se detectó el campo de cliente. Define ERP_FIELD_MAP.");
@@ -211,7 +214,10 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
   const T: T[] = filas.map((f, i) => {
     // el ERP usa fechas de relleno (ej. 2000-01-01) cuando no hay fecha: se intenta con la presentación
     let [periodo, fecha] = M.periodo ? fechaValida(aFecha(f[M.periodo])) : [null, null];
-    if (!periodo && M.presentacion) [periodo, fecha] = fechaValida(aFecha(f[M.presentacion]));
+    // la fecha del servicio es la de presentación; el período (mes) es el que informa el ERP
+    const presen = M.presentacion ? fechaValida(aFecha(f[M.presentacion])) : [null, null];
+    if (!periodo) periodo = presen[0];
+    if (presen[1]) fecha = presen[1];
     return {
       i,
       id: idsOk ? normId(f[M.idServicio]) : "",
@@ -264,7 +270,9 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
       t.ejecutiva ||= b.ejecutiva;
       t.tipo ||= b.tipo;
     }
-    const etapa = etapaDe((b && b.estado) || t.estado);
+    let etapa = etapaDe((b && b.estado) || t.estado);
+    // un servicio agendado para después de hoy aún no es venta realizada: es programado
+    if (etapa !== "anulado" && etapa !== "finalizado" && t.fecha && t.fecha > hoy) etapa = "proyeccion";
     const servicios = t.esBase ? (idsOk ? 1 : t.cant) : 0;
     if (etapa === "anulado") {
       anulados.servicios += servicios;
@@ -278,10 +286,11 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
     }
     const cliente = t.cliente || "(sin cliente)";
     const util = t.util != null ? t.util : M.costo ? t.venta - t.costo : 0;
-    const k = [cliente, t.mandante, t.periodo, etapa, t.ejecutiva, t.tipo].join("\u0001");
+    const w = t.fecha ? semanaIso(t.fecha) : "";
+    const k = [cliente, t.mandante, t.periodo, etapa, t.ejecutiva, t.tipo, w].join("\u0001");
     let h = agg.get(k);
     if (!h) {
-      h = { c: cliente, m: t.mandante, p: t.periodo, e: etapa, x: t.ejecutiva, t: t.tipo, v: 0, k: 0, u: 0, s: 0 };
+      h = { c: cliente, m: t.mandante, p: t.periodo, e: etapa, x: t.ejecutiva, t: t.tipo, v: 0, k: 0, u: 0, s: 0, w };
       agg.set(k, h);
     }
     h.v += t.venta;
@@ -293,5 +302,12 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
   const hechos = [...agg.values()].map((h) => ({ ...h, v: Math.round(h.v), k: Math.round(h.k), u: Math.round(h.u) }));
   if (sinFecha.servicios || sinFecha.venta)
     avisos.push(`${sinFecha.servicios.toLocaleString("es-CL")} servicios ($${Math.round(sinFecha.venta).toLocaleString("es-CL")}) vienen del ERP sin fecha válida y quedaron fuera del análisis.`);
-  return { hechos, ultimaFecha, mapeo: M, filas: filas.length, avisos, anulados };
+  // diagnóstico: venta por valores de columnas categóricas candidatas a segmento
+  const dims: Record<string, Record<string, number>> = {};
+  for (const col of ["unegocio", "servicioTipo", "familia", "modalidad"]) {
+    if (!(col in (filas[0] || {}))) continue;
+    const o: Record<string, number> = (dims[col] = {});
+    filas.forEach((f) => { const k = String(f[col] ?? ""); o[k] = (o[k] || 0) + aNumero(f[M.venta]); });
+  }
+  return { hechos, ultimaFecha, mapeo: M, filas: filas.length, avisos, anulados, muestra: filas.slice(0, 5), dims };
 }

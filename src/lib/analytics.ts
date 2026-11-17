@@ -92,10 +92,14 @@ export function pasaCliente(M: Modelo, F: Filtros, c: string): boolean {
   return true;
 }
 
-export function hechosFiltrados(M: Modelo, F: Filtros, opts: { ignorarPeriodo?: boolean; ignorarEtapa?: boolean } = {}): Hecho[] {
+/** Lo programado (servicios agendados a futuro) no es venta realizada: se excluye salvo que se pida. */
+export const esRealizado = (h: Hecho) => h.e !== "proyeccion";
+
+export function hechosFiltrados(M: Modelo, F: Filtros, opts: { ignorarPeriodo?: boolean; ignorarEtapa?: boolean; incluirProgramado?: boolean } = {}): Hecho[] {
   return M.datos.hechos.filter((h) => {
     if (!opts.ignorarPeriodo && ((F.desde && h.p < F.desde) || (F.hasta && h.p > F.hasta))) return false;
     if (!opts.ignorarEtapa && F.etapa && h.e !== F.etapa) return false;
+    if (!F.etapa && !opts.incluirProgramado && !esRealizado(h)) return false;
     if (F.ejecutiva && ejecutivaDe(M, h) !== F.ejecutiva) return false;
     return pasaCliente(M, F, h.c);
   });
@@ -109,20 +113,25 @@ export interface PuntoMes {
   costo: number;
   util: number;
   serv: number;
+  prog: number; // venta programada (agendada a futuro), aparte de la venta realizada
   etapas: Record<Etapa, number>;
 }
 
 export function serieMensual(hechos: Hecho[], periodos: string[]): PuntoMes[] {
   const m = new Map<string, PuntoMes>();
-  periodos.forEach((p) => m.set(p, { p, venta: 0, costo: 0, util: 0, serv: 0, etapas: { proyeccion: 0, curso: 0, finalizado: 0, sinclasif: 0 } }));
+  periodos.forEach((p) => m.set(p, { p, venta: 0, costo: 0, util: 0, serv: 0, prog: 0, etapas: { proyeccion: 0, curso: 0, finalizado: 0, sinclasif: 0 } }));
   for (const h of hechos) {
     const o = m.get(h.p);
     if (!o) continue;
+    o.etapas[h.e] += h.s;
+    if (!esRealizado(h)) {
+      o.prog += h.v;
+      continue;
+    }
     o.venta += h.v;
     o.costo += h.k;
     o.util += h.u;
     o.serv += h.s;
-    o.etapas[h.e] += h.s;
   }
   return periodos.map((p) => m.get(p)!);
 }
@@ -241,7 +250,7 @@ export function analizarClientes(M: Modelo, F: Filtros, mesAnalisis: string, u: 
   const idx = periodos.length - 1;
   const porCli = new Map<string, Hecho[]>();
   for (const h of M.datos.hechos) {
-    if (h.p > mesAnalisis) continue;
+    if (h.p > mesAnalisis || !esRealizado(h)) continue;
     if (F.ejecutiva && ejecutivaDe(M, h) !== F.ejecutiva) continue;
     if (!pasaCliente(M, F, h.c)) continue;
     (porCli.get(h.c) || porCli.set(h.c, []).get(h.c)!).push(h);
