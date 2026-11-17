@@ -162,6 +162,12 @@ export function etapaDe(v: unknown): Etapa | "anulado" {
   return GLOSAS_BIT.has(g) ? "curso" : "sinclasif";
 }
 
+/** Descarta fechas de relleno o fuera de rango razonable. */
+function fechaValida(x: [string | null, string | null]): [string | null, string | null] {
+  const y = x[0] ? parseInt(x[0].slice(0, 4), 10) : 0;
+  return y >= 2010 && y <= 2100 ? x : [null, null];
+}
+
 const RX_EXTRA = /EXTRA|ADICIONAL|GASTO|RECARGO|SOBRECARGO|DEMURRAGE|ALMACENAJE ADIC/;
 
 const normId = (v: unknown) => {
@@ -184,6 +190,7 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
   const filas = aplanar(json);
   const avisos: string[] = [];
   const anulados = { servicios: 0, venta: 0 };
+  const sinFecha = { servicios: 0, venta: 0 };
   if (!filas.length) {
     return { hechos: [], ultimaFecha: {}, mapeo: {}, filas: 0, avisos: ["La API no devolvió filas."], anulados };
   }
@@ -202,7 +209,9 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
     tipoReg: string; key: string; esFlete: boolean; esBase: boolean;
   }
   const T: T[] = filas.map((f, i) => {
-    const [periodo, fecha] = M.periodo ? aFecha(f[M.periodo]) : [null, null];
+    // el ERP usa fechas de relleno (ej. 2000-01-01) cuando no hay fecha: se intenta con la presentación
+    let [periodo, fecha] = M.periodo ? fechaValida(aFecha(f[M.periodo])) : [null, null];
+    if (!periodo && M.presentacion) [periodo, fecha] = fechaValida(aFecha(f[M.presentacion]));
     return {
       i,
       id: idsOk ? normId(f[M.idServicio]) : "",
@@ -262,7 +271,11 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
       anulados.venta += t.venta;
       continue;
     }
-    if (!t.periodo) continue;
+    if (!t.periodo) {
+      sinFecha.servicios += servicios;
+      sinFecha.venta += t.venta;
+      continue;
+    }
     const cliente = t.cliente || "(sin cliente)";
     const util = t.util != null ? t.util : M.costo ? t.venta - t.costo : 0;
     const k = [cliente, t.mandante, t.periodo, etapa, t.ejecutiva, t.tipo].join("\u0001");
@@ -278,5 +291,7 @@ export function normalizar(json: unknown, mapeoManual: Record<string, string> = 
     if (t.fecha && t.esBase && t.fecha <= hoy && (!ultimaFecha[cliente] || t.fecha > ultimaFecha[cliente])) ultimaFecha[cliente] = t.fecha;
   }
   const hechos = [...agg.values()].map((h) => ({ ...h, v: Math.round(h.v), k: Math.round(h.k), u: Math.round(h.u) }));
+  if (sinFecha.servicios || sinFecha.venta)
+    avisos.push(`${sinFecha.servicios.toLocaleString("es-CL")} servicios ($${Math.round(sinFecha.venta).toLocaleString("es-CL")}) vienen del ERP sin fecha válida y quedaron fuera del análisis.`);
   return { hechos, ultimaFecha, mapeo: M, filas: filas.length, avisos, anulados };
 }

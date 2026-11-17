@@ -88,7 +88,10 @@ export default function Resumen() {
   const ult = cerrados[cerrados.length - 1];
   const pen = cerrados[cerrados.length - 2];
   const varMes = ult && pen && pen.venta > 0 ? ((ult.venta - pen.venta) / pen.venta) * 100 : null;
-  const cumpl = tot.meta > 0 ? (tot.venta / tot.meta) * 100 : null;
+  // solo se compara la venta de los meses que tienen meta (ej. 2025 no tiene plan cargado)
+  const ventaConMeta = serie.filter((s) => s.meta > 0).reduce((a, s) => a + s.venta, 0);
+  const cumpl = tot.meta > 0 ? (ventaConMeta / tot.meta) * 100 : null;
+  const mesesConMeta = serie.filter((s) => s.meta > 0).length;
   const margen = tot.venta > 0 ? (tot.util / tot.venta) * 100 : 0;
   const cierreCumpl = r.cierre?.meta ? ((r.cierre.proy ?? r.cierre.real ?? 0) / r.cierre.meta) * 100 : null;
   const abiertas = d.alertas.filter((a) => !["resuelta", "descartada"].includes(d.gestion[a.id]?.estado ?? "nueva"));
@@ -108,7 +111,7 @@ export default function Resumen() {
         <Kpi k="Utilidad" tono={margen >= 15 ? "ok" : margen >= 8 ? "warn" : "risk"} v={clpCorto(tot.util)} d={`Margen ${pct(margen)}`}>
           <Sparkline valores={cerrados.map((s) => (s.venta ? (s.util / s.venta) * 100 : 0))} color={COL.ok} />
         </Kpi>
-        <Kpi k="Cumplimiento meta" tono={nivel(cumpl, d.umbrales.umbralOk, d.umbrales.umbralAlerta)} v={pct(cumpl)} d={tot.meta ? `${etiquetaFuenteMeta(serie[0].fuente)} ${clpCorto(tot.meta)}` : "Sin meta cargada"}>
+        <Kpi k="Cumplimiento meta" tono={nivel(cumpl, d.umbrales.umbralOk, d.umbrales.umbralAlerta)} v={pct(cumpl)} d={tot.meta ? `${clpCorto(ventaConMeta)} de ${clpCorto(tot.meta)} · ${mesesConMeta} de ${serie.length} meses con meta` : "Sin meta cargada"}>
           <div className="mt-2"><Gauge cumpl={cumpl} /></div>
         </Kpi>
         <Kpi k="Servicios" v={num(tot.serv)} d={`Ticket promedio ${clp(tot.serv ? tot.venta / tot.serv : 0)}`}>

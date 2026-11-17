@@ -29,6 +29,15 @@ test("venta cero en cliente recurrente es fuga", () => {
   assert.equal(d.diag, "fuga");
 });
 
+test("fechas de relleno del ERP usan la presentación o se excluyen", () => {
+  const n = normalizar([
+    { servicioID: 1, cliente: "A", periodo: "2000-01-01", fechaPresen: "2026-03-10", venta: 100, estado: "VALIDADO" },
+    { servicioID: 2, cliente: "A", periodo: "2000-01-01", venta: 50, estado: "VALIDADO" },
+  ]);
+  assert.deepEqual(n.hechos.map((h) => h.p), ["2026-03"]);
+  assert.equal(n.avisos.length, 1);
+});
+
 test("parseo de números y fechas del ERP", () => {
   assert.equal(aNumero("1.234.567"), 1234567);
   assert.equal(aNumero("1.234,5"), 1234.5);
